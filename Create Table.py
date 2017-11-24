@@ -3,6 +3,7 @@ from sqlalchemy import schema, types
 from sqlalchemy import Table,Column,Integer,String,MetaData
 from sqlalchemy import text
 from sqlalchemy import inspect
+from sqlalchemy import select
 
 """
 -------------------------------------------
@@ -105,6 +106,17 @@ books = Table('Books',meta,
               Column('AuthorId',Integer)
               )
 """
+authorsDictionary = ({'Id':1,'Name':'Szczepan Twardoch'},
+                     {'Id':2, 'Name':'Adam Mickiewicz'},
+                     {'Id':3, 'Name':'Dan Brown'},
+                     {'Id':4, 'Name':'Agata Christie'},
+                     {'Id':5, 'Name':'Stephan King'},
+                     {'Id':6, 'Name':'Michaił Bułhakov'}
+                     )
+authors.insert(values=authorsDictionary)
+"""
+
+"""
 print("Print all columns in Authors")
 for columns in authors.c:
     print(columns.name,' ',columns.type)
@@ -130,7 +142,7 @@ meta.reflect(bind=engine)
 for table in meta.tables:
     print("Table name:",table)
 
-#method inspec
+#method inspect()
 #it's also important connection
 #we can check all informations about tables and columns - MetaData
 inspector = inspect(engine)
@@ -139,3 +151,47 @@ for table in inspector.get_table_names():
     print(inspector.get_columns(table))
 
 #############################################EXPRESSIONS#############################################
+
+#####SELECTS#####
+
+sdEngine = create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
+
+sdConnection=sdEngine.connect()
+with sdConnection as conn:
+    sdMeta=MetaData(sdEngine)
+    #in this case, we provide to function Table exisiting table in SQL server. We recive variable with data and we make select on Variable
+    sdCars=Table('Cars',sdMeta,autoload=True)
+                 #Column('Id',Integer,primary_key=True),
+                 #Column('Name',String),
+                 #Column('Price',Integer)
+                 #)
+    stmSelect=select([sdCars])
+    results=conn.execute(stmSelect)
+    print(results.fetchall())
+    conn.close()
+
+sdConnection=sdEngine.connect()
+with sdConnection as conn:
+    sdMeta=MetaData(sdEngine)
+    #definition of table
+    sdCategories=Table('Categories',sdMeta,autoload=True)
+    stmSelect=select([sdCategories])
+    results=conn.execute(stmSelect)
+    for row in results:
+        print(row)
+    conn.close()
+
+sdConnection=sdEngine.connect()
+with sdConnection as conn:
+    sdMeta=MetaData(sdEngine)
+    sdCategories=Table('Categories',sdMeta,autoload=True)
+    #Check columns names in table
+    #for column in sdCategories.c:
+    #    print(column.name)
+    stmSelect=select([sdCategories.c.CategoryName,sdCategories.c.Description])
+    results=conn.execute(stmSelect)
+    print(results.keys())
+    for row in results:
+        print(row)
+    conn.close()
+
