@@ -207,3 +207,51 @@ with sdConnection as conn:
     for row in results:
         print(row)
     conn.close()
+
+#limit(), where() methods to filter data
+#select([statement]).where(statement)
+#select([statement]).limit(integer)
+
+
+print('\n\n\n')
+sdConnection=sdEngine.connect()
+with sdConnection as conn:
+    sdMeta=MetaData(sdEngine)
+    sdCustomers=Table('Customers',sdMeta,autoload=True)
+    #tips - please notice that we use here equal statement from python (==) not from SQL (=)
+    PolandCustomers=select([sdCustomers.c.CompanyName,sdCustomers.c.City,sdCustomers.c.Country]).where(sdCustomers.c.Country=='Poland')
+    GermanyCustomers=select([sdCustomers.c.CompanyName,sdCustomers.c.City,sdCustomers.c.Country]).where(sdCustomers.c.Country=='Germany')
+    FranceCustomers=select([sdCustomers.c.CompanyName,sdCustomers.c.City,sdCustomers.c.Country]).where(sdCustomers.c.Country=='France')
+    ItalyCustomers=select([sdCustomers.c.CompanyName, sdCustomers.c.City, sdCustomers.c.Country]).where(sdCustomers.c.Country == 'Italy')
+
+
+    results=conn.execute(PolandCustomers)
+    print("Poland Customers")
+    print(results.keys())
+    for row in results:
+        print(row)
+
+    print('\n\n\n')
+    results=conn.execute(GermanyCustomers)
+    print("Germany Customers")
+    print(results.keys())
+    for row in results:
+        print(row)
+
+    print('\n\n\n')
+    results=conn.execute(FranceCustomers)
+    print("France Customeres")
+    print(results.keys())
+    for row in results:
+        print(row)
+
+    print('\n\n\n')
+    results=conn.execute(ItalyCustomers)
+    print("Italy Customeres")
+    print(results.keys())
+    for row in results:
+        print(row)
+
+    conn.close()
+
+#like() method
