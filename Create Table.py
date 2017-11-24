@@ -195,3 +195,15 @@ with sdConnection as conn:
         print(row)
     conn.close()
 
+
+#if we want select concrete column we must use variableTable.c.ColumnName in select -> select([ourStatement])
+sdConnection=sdEngine.connect()
+with sdConnection as conn:
+    sdMeta=MetaData(sdEngine)
+    sdCustomers=Table('Customers',sdMeta,autoload=True)
+    stmSelect=select([sdCustomers.c.CompanyName,sdCustomers.c.City,sdCustomers.c.Country])
+    results=conn.execute(stmSelect)
+    print(results.keys())
+    for row in results:
+        print(row)
+    conn.close()
