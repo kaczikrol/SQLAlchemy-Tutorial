@@ -4,6 +4,8 @@ from sqlalchemy import Table,Column,Integer,String,MetaData
 from sqlalchemy import text
 from sqlalchemy import inspect
 from sqlalchemy import select
+from sqlalchemy import and_, or_
+from sqlalchemy import asc,desc, tuple_
 
 """
 -------------------------------------------
@@ -44,7 +46,7 @@ INSERT INTO Books VALUES(4,'David Copperfield',4);
 INSERT INTO Books VALUES(5,'Good as Gold',3);
 INSERT INTO Books VALUES(6,'Anna Karenia',2);
 """
-
+"""
 #############################################RAW SQL AND CONNECTIONS#############################################
 #connection to database
 engine = create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
@@ -84,7 +86,7 @@ for row in CarsTable:
 
 #############################################METADATA#############################################
 """
-Metadata is information about the data in the database; for instance information about the tables and columns, in which we store data. 
+#Metadata is information about the data in the database; for instance information about the tables and columns, in which we store data.
 """
 
 #itS neccessary to definition table, without it we dont create table
@@ -106,6 +108,7 @@ books = Table('Books',meta,
               Column('AuthorId',Integer)
               )
 """
+"""
 authorsDictionary = ({'Id':1,'Name':'Szczepan Twardoch'},
                      {'Id':2, 'Name':'Adam Mickiewicz'},
                      {'Id':3, 'Name':'Dan Brown'},
@@ -114,6 +117,7 @@ authorsDictionary = ({'Id':1,'Name':'Szczepan Twardoch'},
                      {'Id':6, 'Name':'Michaił Bułhakov'}
                      )
 authors.insert(values=authorsDictionary)
+
 """
 
 """
@@ -132,6 +136,7 @@ for columns in authors.primary_key:
 print("\nPrint Primary_Key in Books")
 for columns in books.primary_key:
     print(columns.name, ' ', columns.type)
+"""
 """
 #method reflect()
 #here we related reflect method with our engine - and or engice is simply connection do conrete database
@@ -253,5 +258,129 @@ with sdConnection as conn:
         print(row)
 
     conn.close()
-
+"""
 #like() method
+
+#engine = create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
+#connection = engine.connect()
+
+"""
+with connection as conn:
+    meta=MetaData(engine)
+    Customers=Table('Customers',meta,autoload=True)
+    stm=select([Customers])
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+conn.close()
+"""
+"""
+with connection as conn:
+    meta=MetaData(engine)
+    customers=Table('Customers',meta,autoload=True)
+    stm=select([customers]).where(or_(customers.c.Country=='Poland',customers.c.Country=='Germany'))
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+
+###IMPROTANT - METHOD REFLECT ALLOW TO SEE ALL TABLES AND ALL COLUMNS IN DATABASE - REMEBER!!!!!!###
+"""
+with connection as conn:
+    meta=MetaData(engine)
+    #meta.reflect()
+    #for tables in meta.tables:
+    #    print(tables)
+    orderDetails=Table('Order Details',meta,autoload=True)
+    stm=select([orderDetails]).where(orderDetails.c.UnitPrice*orderDetails.c.Quantity>2000)
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+
+#method like()
+# we use it in select([statement]).where(statement.like(assumptions))
+"""
+with connection as conn:
+    meta=MetaData(engine)
+    #meta.reflect()
+    #for table in meta.tables:
+    #    print(table)
+    employees=Table('Employees',meta,autoload=True)
+    stm=select([employees]).where(employees.c.FirstName.like('an%'))
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+#method order_by() its important to add to import desc or asc
+"""
+with connection as conn:
+    meta=MetaData(engine)
+    #reflect() to check list of tables available in database
+    #meta.reflect()
+    #for table in meta.tables:
+    #    print(table)
+    territories=Table('Territories',meta,autoload=True)
+    stm=select([territories]).order_by(territories.c.TerritoryDescription)
+    results=conn.execute(stm)
+    print(results.keys())
+    countRows=0
+    for row in results:
+        print(row)
+        countRows+=1
+    print("Number of rows: ",countRows)
+"""
+"""
+#below example how to use order_by() method
+#select([columns]).order_by(asc(column) or desc(columns))
+with connection as conn:
+    meta=MetaData(engine)
+    meta.reflect()
+    for table in meta.tables:
+        print(table)
+    products=Table('Products',meta,autoload=True)
+    stm=select([products.c.ProductName,products.c.UnitPrice]).order_by(desc(products.c.UnitPrice))
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+#in_() operator and tuple_()
+
+"""
+with connection as conn:
+    #in this case tuple (1,) it allows have a lot of arguments
+    indicator=[(1,),(2,),(3,)]
+    indicator2=[(1),(2),(3)]
+    meta=MetaData(engine)
+    meta.reflect()
+    for table in meta.tables:
+        print(table)
+    employees=Table('Employees',meta,autoload=True)
+    #first version
+    #stm=select([employees]).where(tuple_(employees.c.EmployeeID).in_(indicator))
+    stm=select([employees]).where(employees.c.EmployeeID.in_(indicator2))
+    #second version
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+
+"""
+with connection as conn:
+    titleVariable=[('Sales Representative',)]
+    meta=MetaData(engine)
+    employees=Table('Employees',meta,autoload=True)
+    stm=select([employees]).where(tuple_(employees.c.Title).in_(titleVariable))
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+
+###############################CREATING TABLES################################
