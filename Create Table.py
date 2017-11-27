@@ -6,7 +6,10 @@ from sqlalchemy import inspect
 from sqlalchemy import select
 from sqlalchemy import and_, or_
 from sqlalchemy import asc,desc, tuple_
-
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 """
 -------------------------------------------
 IF OBJECT_ID(N'dbo.Cars',N'u') is not null 
@@ -384,3 +387,140 @@ with connection as conn:
 """
 
 ###############################CREATING TABLES################################
+"""
+
+engine = create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
+connection = engine.connect()
+#connection.execute(text("IF OBJECT_ID(N'dbo.Authors',N'u') IS NOT NULL DROP TABLE dbo.Authors"))
+connection.execute(text("DROP TABLE dbo.Authors"))
+
+with connection as conn:
+    meta=MetaData(engine)
+    authors=Table('Authors',meta,
+                  Column('Id',Integer,primary_key=True),
+                  Column('FirstName',String),
+                  Column('LastName',String),
+                  Column('BirthYear',Integer))
+    authors.create()
+
+#{'First Name':,'Last Name':,'Birth Year':}
+    authorsdictionary=({'FirstName':'Przemek','LastName':'Kaczmarek','BirthYear':1993},
+                       {'FirstName':'Michaił','LastName':'Bułhakov','BirthYear':1815},
+                       {'FirstName':'Adam', 'LastName':'Mickiewicz', 'BirthYear':1785},
+                       {'FirstName':'Ken', 'LastName':'Kessey', 'BirthYear':1942}
+                       )
+
+    insertdata=authors.insert().values(authorsdictionary)
+    conn.execute(insertdata)
+
+    stm=select([authors]).where(authors.c.BirthYear>1900)
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+"""
+
+###############################JOINING TABLES###############################
+
+#join() method
+"""
+engine = create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
+connection = engine.connect()
+#connection.execute(text("IF OBJECT_ID(N'dbo.Authors',N'u') is not null drop table dbo.Authors"))
+#connection.execute(text("IF OBJECT_ID(N'dbo.Books',N'u') is not null drop table dbo.Books"))
+
+connection.execute(text("drop table dbo.Books"))
+connection.execute(text("drop table dbo.Authors"))
+
+
+
+with connection as conn:
+    meta=MetaData(engine)
+    Authors=Table('Authors',meta,
+                  Column('Id',Integer,primary_key=True),
+                  Column('FirstName',String),
+                  Column('LastName',String),
+                  Column('BirthYear',Integer))
+    Books=Table('Books',meta,
+                Column('Id',Integer,primary_key=True),
+                Column('Title',String),
+                Column('RelaseYear',Integer),
+                Column('AuthorId',Integer,ForeignKey("Authors.Id")))
+    Authors.create()
+    Books.create()
+    #{'FirstName':, 'LastName':, 'BirthYear':}
+    dataAuthors=({'FirstName':'Adam','LastName':'Mickiewicz','BirthYear':1798},
+                 {'FirstName':'Szczepan', 'LastName':'Twardoch', 'BirthYear':1978},
+                 {'FirstName':'Remigiusz', 'LastName':'Mróz', 'BirthYear':1984},
+                 {'FirstName':'Zygmunt', 'LastName':'Miłoszewski', 'BirthYear':1975},
+                 {'FirstName':'Przemysław', 'LastName':'Kaczmarek', 'BirthYear':1993})
+
+    #{'Title':,'RelaseYear','AuthorId':}
+    dataBooks=({'Title':'Pan Tadeusz','RelaseYear':1848,'AuthorId':1},
+              {'Title':'Wotum nieufności', 'RelaseYear':2016, 'AuthorId':3},
+              {'Title':'Ojciec Chrzestny', 'RelaseYear':1980, 'AuthorId':None},
+              {'Title':'Bezcenny', 'RelaseYear':2011, 'AuthorId':4},
+              {'Title':'Morfina', 'RelaseYear':2011, 'AuthorId':2},
+              {'Title':'Ojciec Goriot', 'RelaseYear':1890, 'AuthorId':None},
+              {'Title':'Drach', 'RelaseYear':2015, 'AuthorId':2})
+
+    #IMPORTANT PATTERN TO INSERT DATA stmVariable=tableVariable.insert().values(dataVariable)
+    insertAuthors=Authors.insert().values(dataAuthors)
+    insertBooks=Books.insert().values(dataBooks)
+    conn.execute(insertAuthors)
+    conn.execute(insertBooks)
+
+
+    ###join() method###
+    stm=select([Books.join(Authors)])
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+
+    ###outerjoin() method - it is left join###
+    stm=select([Books.outerjoin(Authors)]).where(Books.c.RelaseYear>2013).order_by(Books.c.Title)
+    results=conn.execute(stm)
+    print(results.keys())
+    for row in results:
+        print(row)
+
+"""
+#Important question how I can make more than one query in one connection? Multi-threaded
+#now I solved it with open and close new connections but it's stupid! Search a better solution!!!
+
+###############################OBJECT RELATIONAL MAPPING###############################
+engine = create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
+
+#What is this? Check declarative_base() method
+Base = declarative_base()
+
+#it's clear
+class Author(Base):
+    __tablename__='AuthorsORM'
+    Id = Column(Integer,primary_key=True)
+    FirstName=Column(String)
+    LastName=Column(String)
+
+#here probabl we create our metadata
+Base.metadata.bind=engine
+Base.metadata.create_all()
+
+#open session it's clear
+Session=sessionmaker(bind=engine)
+ses=Session()
+
+#the way to add and commit data
+ses.add_all(
+    [Author(Id=1,FirstName='Michaił',LastName='Bułkahov')]
+)
+
+#save in database our changes
+ses.commit()
+
+#execute our query
+results=ses.query(Author).all()
+
+#printing data
+for author in results:
+    print(author.FirstName, author.LastName)
