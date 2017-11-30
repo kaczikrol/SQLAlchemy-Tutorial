@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, MetaData
 from sqlalchemy import create_engine, Text, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, mapper,relation,sessionmaker
+import random
 
 #CREATE ENGINE TO OUR DATABASE!
 engine=create_engine('mssql+pyodbc://DOM/Northwind?driver=SQL Server Native Client 11.0')
@@ -21,9 +22,9 @@ class Company(Base):
 
     #it's clear
     def __init__(self,name,country):
-        name = self.name
-        name_abbrev = self.name[:5]
-        country = self.country
+        self.name = name
+        self.name_abbrev = name[:5]
+        self.country = country
 
     def __repr__(self):
         return "<Company('%s','%s','%s')>" %(self.name,self.name_abbrev,self.country)
@@ -43,13 +44,17 @@ class User(Base):
     company = relation(Company,backref=backref('companies',order_by=id))
 
     def __init__(self,login,password,city):
-        login = self.login
-        password = self.password
-        city = self.city
-        #country = self.country
+        self.login = login
+        self.password = password
+        self.city = city
+        #self.company_id = company_id
 
     def __repr__(self):
         return "<User('%s','%s','%s')>" %(self.login,self.password,self.city)
+
+    @staticmethod
+    def getKeys():
+        print('login','passwor','city')
 
 
 
@@ -61,6 +66,67 @@ meta=Base.metadata
 meta.create_all()
 
 #if we want have table object is simply calling:
-users_table=User.__table__
 companies_table=Company.__table__
+users_table=User.__table__
 
+#we don't create session so nothing happen in SQL, but user exists in our cache
+mike=User('MIKE001','MikeIsKing','London')
+print(mike)
+
+#let's create session
+Session = sessionmaker(bind=engine)
+session = Session()
+
+arvato=Company('Arvato Polska','Poland')
+bz_wbk=Company('BZ WBK Leasing','Poland')
+
+susana=User('SUSI001','Susana2012','Berlin')
+
+#we add this transaction to queque and it's pending to commit session after commit changes will be in table
+session.add(susana)
+przemek=User('KACZy','Kaczmarek','Poznan')
+przemek.company_id=11
+
+#commit provides that we insert changes to table and SQL will be execute
+#session.commit()
+
+session.add_all([
+    User('JOHN002','Johny','Manchester'),
+    User('PRZE123','Perla','Poznan'),
+    User('JUL001','Cebulka','Warsaw'),
+    susana,
+    arvato,
+    przemek,
+    bz_wbk
+])
+
+session.commit()
+
+##############################HOW TO USE SESSION.DIRTY?##############################
+#print(session.dirty)
+
+#############################to check pending elements################################
+#print(session.new)
+
+###############################ONE OF THE MOST IMPORTANT METHOD!######################
+#session.commit()
+
+all_users=session.query(User).all()
+User.getKeys()
+for row in all_users:
+    print(row)
+
+london_users=session.query(User).filter_by(city='London')
+print('london users')
+for row in london_users:
+    print(row)
+
+
+berlin_users=session.query(User).filter_by(city='Berlin')
+print('berlin users')
+for row in berlin_users:
+    print(row)
+
+first_join=session.query(User,Company).filter(User.company_id==Company.id)
+for row in first_join:
+    print(row)
